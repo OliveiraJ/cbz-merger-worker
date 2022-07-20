@@ -10,14 +10,14 @@ import (
 	"strconv"
 )
 
+var rootFolderPath = os.Args[1]
+var destinyFolder = os.Args[2]
+var directorys []string
+var pages []string
+var pagenumber = 0
+
 func main() {
 	fmt.Println("Merging cbz files inside of " + os.Args[1])
-
-	var rootFolderPath = os.Args[1]
-	var destinyFolder = os.Args[2]
-	var directorys []string
-	var pages []string
-	var pagenumber = 0
 
 	//Cimnhando pelos arquivos e pegando os nomes de cada página e pasta
 	err := filepath.WalkDir(rootFolderPath, func(path string, d os.DirEntry, err error) error {
