@@ -141,6 +141,8 @@ func main() {
 		panic(err)
 	}
 
+	cleanFiles()
+
 }
 
 func unzipCbzFiles(rootFolderPath string) {
@@ -157,10 +159,7 @@ func unzipCbzFiles(rootFolderPath string) {
 
 	for _, name := range files {
 		pathInZip := strings.Replace(name, ".cbz", ".zip", 1)
-		err = os.Rename(rootFolderPath+"/"+name, rootFolderPath+"/"+pathInZip)
-		if err != nil {
-			panic(err)
-		}
+		renameFiles(rootFolderPath+"/"+name, rootFolderPath+"/"+pathInZip)
 	}
 
 	for _, f := range files {
@@ -168,6 +167,11 @@ func unzipCbzFiles(rootFolderPath string) {
 		unzipSource(f, f)
 	}
 
+	for _, name := range files {
+		name = strings.Replace(name, ".cbz", ".zip", 1)
+		pathInZip := strings.Replace(name, ".zip", ".cbz", 1)
+		renameFiles(rootFolderPath+"/"+name, rootFolderPath+"/"+pathInZip)
+	}
 }
 
 func unzipSource(cbzName string, destination string) {
@@ -200,4 +204,29 @@ func unzipSource(cbzName string, destination string) {
 
 		dstFile.Close()
 	}
+}
+
+func renameFiles(oldName, newName string) {
+	err := os.Rename(oldName, newName)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func cleanFiles() {
+	createdDirs := []string{}
+	err := filepath.WalkDir(rootFolderPath, func(path string, d os.DirEntry, err error) error {
+		if d.IsDir() {
+			createdDirs = append(createdDirs, d.Name())
+		}
+		return err
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	for _, dir := range createdDirs {
+		os.RemoveAll(rootFolderPath + "/" + dir)
+	}
+
 }
