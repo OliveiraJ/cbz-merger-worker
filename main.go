@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 )
 
 var rootFolderPath = os.Args[1]
@@ -18,7 +19,7 @@ var pagenumber = 0
 
 func main() {
 	fmt.Println("Merging cbz files inside of " + os.Args[1])
-
+	unzipCbzFiles(rootFolderPath)
 	//Cimnhando pelos arquivos e pegando os nomes de cada página e pasta
 	err := filepath.WalkDir(rootFolderPath, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
@@ -28,7 +29,9 @@ func main() {
 			directorys = append(directorys, d.Name())
 
 		} else {
-			pages = append(pages, d.Name())
+			if filepath.Ext(d.Name()) == ".jpg" {
+				pages = append(pages, d.Name())
+			}
 		}
 		return nil
 	})
@@ -50,7 +53,7 @@ func main() {
 			if err != nil {
 				return err
 			}
-			if !d.IsDir() {
+			if !d.IsDir() && filepath.Ext(d.Name()) == ".jpg" {
 				pagenumber++
 
 				originalPage, err := os.Open(rootFolderPath + "/" + comicFolder + "/" + d.Name())
@@ -138,4 +141,63 @@ func main() {
 		panic(err)
 	}
 
+}
+
+func unzipCbzFiles(rootFolderPath string) {
+	files := []string{}
+	err := filepath.WalkDir(rootFolderPath, func(path string, d os.DirEntry, err error) error {
+		if !d.IsDir() && filepath.Ext(d.Name()) == ".cbz" {
+			files = append(files, d.Name())
+		}
+		return err
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	for _, name := range files {
+		pathInZip := strings.Replace(name, ".cbz", ".zip", 1)
+		err = os.Rename(rootFolderPath+"/"+name, rootFolderPath+"/"+pathInZip)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	for _, f := range files {
+		f = strings.Replace(f, ".cbz", ".zip", 1)
+		unzipSource(f, f)
+	}
+
+}
+
+func unzipSource(cbzName string, destination string) {
+	destination = strings.Replace(destination, ".zip", "", 1)
+	cbzOpened, err := zip.OpenReader(rootFolderPath + "/" + cbzName)
+	if err != nil {
+		panic(err)
+	}
+	defer cbzOpened.Close()
+
+	if err := os.MkdirAll(rootFolderPath+"/"+destination, os.ModePerm); err != nil {
+		panic(err)
+	}
+
+	for _, f := range cbzOpened.File {
+		dstFile, err := os.OpenFile(rootFolderPath+"/"+destination+"/"+f.Name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
+		if err != nil {
+			panic(err)
+		}
+
+		fileInCbz, err := f.Open()
+		if err != nil {
+			panic(err)
+		}
+		fileInCbz.Close()
+
+		if _, err := io.Copy(dstFile, fileInCbz); err != nil {
+			panic(err)
+		}
+
+		dstFile.Close()
+	}
 }
